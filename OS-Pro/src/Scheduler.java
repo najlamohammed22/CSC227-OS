@@ -1,5 +1,7 @@
 
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Scanner;
 
 public class Scheduler {
@@ -27,6 +29,7 @@ public class Scheduler {
     static final int MAX_PROCESSES = 100;
     static process[] Q1 = new process[MAX_PROCESSES];
     static process[] Q2 = new process[MAX_PROCESSES];
+    static process[] executionOrder = new process[200];
     static int Q1Size = 0;
     static int Q2Size = 0;
 
@@ -42,7 +45,8 @@ public class Scheduler {
                     enterProcessInformation(scanner);
                     break;
                 case 2:
-                    // Placeholder for displaying scheduling order and detailed process information ( i did not apply it ) 
+                    scheduleProcesses();
+                    printReport();
                     break;
                 case 3:
                     System.out.println("Exiting program...");
@@ -86,4 +90,113 @@ public class Scheduler {
             }
         }
     }
+
+    void scheduleProcesses() {
+        int timeQuantum = 3;
+        int currentTime = 0;
+
+        // RR for Q1
+        while (Q1Size > 0) {
+            process currentProcess = Q1[0];
+            if (currentProcess.arrivalTime > currentTime) {
+                currentTime = currentProcess.arrivalTime;
+            }
+
+
+        // Check if any new processes arrive at the same time a process releases the CPU
+        List<process> newProcesses = new ArrayList<>();
+        for (process newProcess : Q1) {
+            if (newProcess != null && newProcess.arrivalTime == currentTime && newProcess != currentProcess) {
+                newProcesses.add(newProcess);
+            }
+        }
+
+        // Add the new processes to the front of the queue
+        for (process newProcess : newProcesses) {
+            if (newProcess.priority == 1) {
+                Q1[Q1Size++] = newProcess;
+            } else {
+                Q2[Q2Size++] = newProcess;
+            }
+        }
+
+
+            // Execute the process for the time quantum or until completion
+            if (currentProcess.cpuBurst > timeQuantum) {
+                currentProcess.cpuBurst -= timeQuantum;
+                currentTime += timeQuantum;
+                currentProcess.terminationTime = currentTime;
+                executionOrder[Q1Size + Q2Size] = currentProcess;
+                shiftArray(Q1, Q1Size);
+                Q1[Q1Size - 1] = currentProcess; // Move the process to the end of the queue
+            } else {
+                currentTime += currentProcess.cpuBurst;
+                currentProcess.terminationTime = currentTime;
+                currentProcess.turnAroundTime = currentProcess.terminationTime - currentProcess.arrivalTime;
+                currentProcess.waitingTime = currentProcess.turnAroundTime - currentProcess.cpuBurst;
+                currentProcess.responseTime = currentProcess.startTime - currentProcess.arrivalTime;
+                executionOrder[Q1Size + Q2Size] = currentProcess;
+                shiftArray(Q1, Q1Size);
+                Q1Size--;
+            }
+        }
+        // SJF here 
+    }
+
+    void printReport() {
+        // Print scheduling order of processes
+        System.out.print("Scheduling Order of Processes: ");
+        for (process process : Q1) {
+            if (process != null) {
+                System.out.print(process.processID + " | ");
+            }
+        }
+        System.out.println("\n");
+
+        // Print detailed information for each process
+        for (process process : Q1) {
+            if (process != null) {
+                System.out.println("Process ID: " + process.processID);
+                System.out.println("Priority: " + process.priority);
+                System.out.println("Arrival Time: " + process.arrivalTime);
+                System.out.println("CPU Burst: " + process.cpuBurst);
+                System.out.println("Start Time: " + process.startTime);
+                System.out.println("Termination Time: " + process.terminationTime);
+                System.out.println("Turnaround Time: " + process.turnAroundTime);
+                System.out.println("Waiting Time: " + process.waitingTime);
+                System.out.println("Response Time: " + process.responseTime + "\n");
+            }
+        }
+
+        // Calculate and print average turnaround time, waiting time, and response time
+        int totalTurnaroundTime = 0;
+        int totalWaitingTime = 0;
+        int totalResponseTime = 0;
+        int count = 0;
+        for (process process : Q1) {
+            if (process != null) {
+                totalTurnaroundTime += process.turnAroundTime;
+                totalWaitingTime += process.waitingTime;
+                totalResponseTime += process.responseTime;
+                count++;
+            }
+        }
+        double avgTurnaroundTime = (double) totalTurnaroundTime / count;
+        double avgWaitingTime = (double) totalWaitingTime / count;
+        double avgResponseTime = (double) totalResponseTime / count;
+
+        System.out.println("Average Turnaround Time: " + avgTurnaroundTime);
+        System.out.println("Average Waiting Time: " + avgWaitingTime);
+        System.out.println("Average Response Time: " + avgResponseTime);
+       
+        // write them to text file 
+    }
+
+    private void shiftArray(process[] array, int size) {
+        for (int i = 0; i < size - 1; i++) {
+            array[i] = array[i + 1];
+        }
+    }
+
+
 }
