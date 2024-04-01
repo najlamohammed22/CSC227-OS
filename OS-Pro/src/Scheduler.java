@@ -1,5 +1,8 @@
 
 
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
@@ -189,7 +192,24 @@ public class Scheduler {
         System.out.println("Average Waiting Time: " + avgWaitingTime);
         System.out.println("Average Response Time: " + avgResponseTime);
        
-        // write them to text file 
+        // write them to text file
+        try (PrintWriter writer = new PrintWriter(new FileWriter("Report.txt"))) {
+            writer.println("Scheduling Order:");
+            for (process process : Q1) {
+                writer.print("P" + process.processID + " | ");
+            }
+            writer.println("\n\nProcess Details:");
+            writer.println("PID | Priority | Arrival Time | CPU Burst | Start Time |  Turnaround Time | Waiting Time | Response Time");
+            for (process process : Q1) {
+                writer.println(process.processID + " | " + process.priority + " | " + process.arrivalTime + " | " + process.cpuBurst + " | " +
+                        process.startTime + " | " + process.turnAroundTime + " | " + process.waitingTime + " | " + process.responseTime);
+            }
+            writer.println("\nAverage Turnaround Time: " + avgTurnaroundTime);
+            writer.println("Average Waiting Time: " + avgWaitingTime);
+            writer.println("Average Response Time: " + avgResponseTime);
+        } catch (IOException e) {
+            e.printStackTrace();
+        } 
     }
 
     private void shiftArray(process[] array, int size) {
