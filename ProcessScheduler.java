@@ -136,7 +136,54 @@ public class Scheduler {
             }
         }
         // SJF here 
+            if (shortestJob != null) {
+                // Gantt chart implementation
+                GanttChartSection temp = new GanttChartSection(currentTime, currentTime + shortestBurstTime, shortestJob.getId());
+                ganttChartData.add(temp);
+                //
+                currentTime += shortestBurstTime;
+                processes[shortestJobIndex].setCpuBurst(0); // Mark the process as completed
+            } else {
+                currentTime++; // No process arrived yet, move to the next unit of time
+            }
+        }
+
+        // Calculate waiting and turnaround times
+        for (int i = 0; i < numProcesses; i++) {
+            Process process = processes[i];
+            int waitingTime = 0;
+            for (GanttChartSection section : ganttChartData) {
+                if (section.getProcessName().equals(process.getId())) {
+                    waitingTime = section.getStartTime() - process.getArrivalTime();
+                    break;
+                }
+            }
+            process.setCpuBurst(process.getCpuBurst()); // Reset CPU burst to original value
+            process.setWaitingTime(waitingTime);
+            process.setTurnaroundTime(waitingTime + process.getCpuBurst());
+        }
     }
+
+    public double getAverageWaiting() {
+        double sum = 0;
+        for (int i = 0; i < numProcesses; i++) {
+            sum += processes[i].getWaitingTime();
+        }
+        return sum / numProcesses;
+    }
+
+    public double getAverageTurnaround() {
+        double sum = 0;
+        for (int i = 0; i < numProcesses; i++) {
+            sum += processes[i].getTurnaroundTime();
+        }
+        return sum / numProcesses;
+    }
+
+    public ArrayList<GanttChartSection> getGanttChartData() {
+        return ganttChartData;
+    }}
+  }
 
     void printReport() {
         // Print scheduling order of processes
