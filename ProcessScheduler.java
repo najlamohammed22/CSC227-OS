@@ -2,7 +2,7 @@ import java.util.Scanner;
 
 public class Scheduler {
 
-    static class process {
+    static class Process {
         String processID;
         int priority;
         int arrivalTime;
@@ -13,7 +13,7 @@ public class Scheduler {
         int waitingTime;
         int responseTime;
 
-        public process(String processID, int priority, int arrivalTime, int cpuBurst) {
+        public Process(String processID, int priority, int arrivalTime, int cpuBurst) {
             this.processID = processID;
             this.priority = priority;
             this.arrivalTime = arrivalTime;
@@ -21,10 +21,9 @@ public class Scheduler {
         }
     }
 
-    // Assuming a maximum size for simplicity, but this could be dynamically resized as needed
     static final int MAX_PROCESSES = 100;
-    static process[] Q1 = new process[MAX_PROCESSES];
-    static process[] Q2 = new process[MAX_PROCESSES];
+    static Process[] Q1 = new Process[MAX_PROCESSES];
+    static Process[] Q2 = new Process[MAX_PROCESSES];
     static int Q1Size = 0;
     static int Q2Size = 0;
 
@@ -69,7 +68,7 @@ public class Scheduler {
             int priority = scanner.nextInt();
             int arrivalTime = scanner.nextInt();
             int cpuBurst = scanner.nextInt();
-            process process = new process("P" + (i + 1), priority, arrivalTime, cpuBurst);
+            Process process = new Process("P" + (i + 1), priority, arrivalTime, cpuBurst);
             if (priority == 1) {
                 if (Q1Size < MAX_PROCESSES) {
                     Q1[Q1Size++] = process;
@@ -90,105 +89,93 @@ public class Scheduler {
         int timeQuantum = 3;
         int currentTime = 0;
 
-        // RR for Q1
-        while (Q1Size > 0) {
-            process currentProcess = Q1[0];
-            if (currentProcess.arrivalTime > currentTime) {
-                currentTime = currentProcess.arrivalTime;
+        // RR for Q1 and SJF for Q2
+        while (Q1Size > 0 || Q2Size > 0) {
+            Process currentProcess = null;
+            if (Q1Size > 0) {
+                currentProcess = Q1[0];
+            } else if (Q2Size > 0) {
+                currentProcess = Q2[0];
             }
 
-
-        // Check if any new processes arrive at the same time a process releases the CPU
-        List<process> newProcesses = new ArrayList<>();
-        for (process newProcess : Q1) {
-            if (newProcess != null && newProcess.arrivalTime == currentTime && newProcess != currentProcess) {
-                newProcesses.add(newProcess);
-            }
-        }
-
-        // Add the new processes to the front of the queue
-        for (process newProcess : newProcesses) {
-            if (newProcess.priority == 1) {
-                Q1[Q1Size++] = newProcess;
-            } else {
-                Q2[Q2Size++] = newProcess;
-            }
-        }
-
-
-            // Execute the process for the time quantum or until completion
-            if (currentProcess.cpuBurst > timeQuantum) {
-                currentProcess.cpuBurst -= timeQuantum;
-                currentTime += timeQuantum;
-                currentProcess.terminationTime = currentTime;
-                executionOrder[Q1Size + Q2Size] = currentProcess;
-                shiftArray(Q1, Q1Size);
-                Q1[Q1Size - 1] = currentProcess; // Move the process to the end of the queue
-            } else {
-                currentTime += currentProcess.cpuBurst;
-                currentProcess.terminationTime = currentTime;
-                currentProcess.turnaroundTime = currentProcess.terminationTime - currentProcess.arrivalTime;
-                currentProcess.waitingTime = currentProcess.turnaroundTime - currentProcess.cpuBurst;
-                currentProcess.responseTime = currentProcess.startTime - currentProcess.arrivalTime;
-                executionOrder[Q1Size + Q2Size] = currentProcess;
-                shiftArray(Q1, Q1Size);
-                Q1Size--;
-            }
-        }
-        // SJF here 
-            if (shortestJob != null) {
-                // Gantt chart implementation
-                GanttChartSection temp = new GanttChartSection(currentTime, currentTime + shortestBurstTime, shortestJob.getId());
-                ganttChartData.add(temp);
-                //
-                currentTime += shortestBurstTime;
-                processes[shortestJobIndex].setCpuBurst(0); // Mark the process as completed
-            } else {
-                currentTime++; // No process arrived yet, move to the next unit of time
-            }
-        }
-
-        // Calculate waiting and turnaround times
-        for (int i = 0; i < numProcesses; i++) {
-            Process process = processes[i];
-            int waitingTime = 0;
-            for (GanttChartSection section : ganttChartData) {
-                if (section.getProcessName().equals(process.getId())) {
-                    waitingTime = section.getStartTime() - process.getArrivalTime();
-                    break;
+            if (currentProcess != null) {
+                if (currentProcess.arrivalTime > currentTime) {
+                    currentTime = currentProcess.arrivalTime;
                 }
+
+                // Check if any new processes arrive at the same time a process releases the CPU
+                for (int i = 0; i < Q1Size; i++) {
+                    if (Q1[i] != null && Q1[i].arrivalTime == currentTime && Q1[i] != currentProcess) {
+                        if (Q1[i].priority == 1) {
+                            Q1[Q1Size++] = Q1[i];
+                        } else {
+                            Q2[Q2Size++] = Q1[i];
+                        }
+                        Q1[i] = null;
+                    }
+                }
+
+                // Execute the process for the time quantum or until completion
+                if (currentProcess.priority == 1) {
+                    if (currentProcess.cpuBurst > timeQuantum) {
+                        currentProcess.cpuBurst -= timeQuantum;
+                        currentTime += timeQuantum;
+                        currentProcess.terminationTime = currentTime;
+                        shiftArray(Q1, Q1Size);
+                        Q1[Q1Size - 1] = currentProcess; // Move the process to the end of the queue
+                    } else {
+                        currentTime += currentProcess.cpuBurst;
+                        currentProcess.terminationTime = currentTime;
+                        currentProcess.turnaroundTime = currentProcess.terminationTime - currentProcess.arrivalTime;
+                        currentProcess.waitingTime = currentProcess.turnaroundTime - currentProcess.cpuBurst;
+                        currentProcess.responseTime = currentProcess.startTime - currentProcess.arrivalTime;
+                        shiftArray(Q1, Q1Size);
+                        Q1Size--;
+                    }
+                } else {
+                    // SJF for Q2
+                    if (Q2Size > 0) {
+                        Process shortestJob = Q2[0];
+                        int shortestBurstTime = shortestJob.cpuBurst;
+                        int shortestJobIndex = 0;
+                        for (int i = 1; i < Q2Size; i++) {
+                            if (Q2[i].cpuBurst < shortestBurstTime) {
+                                shortestJob = Q2[i];
+                                shortestBurstTime = shortestJob.cpuBurst;
+                                shortestJobIndex = i;
+                            }
+                        }
+
+                        // Execute the shortest job
+                        shortestJob.startTime = currentTime;
+                        currentTime += shortestBurstTime;
+                        shortestJob.terminationTime = currentTime;
+                        shortestJob.turnaroundTime = shortestJob.terminationTime - shortestJob.arrivalTime;
+                        shortestJob.waitingTime = shortestJob.turnaroundTime - shortestJob.cpuBurst;
+                        shortestJob.responseTime = shortestJob.startTime - shortestJob.arrivalTime;
+
+                        // Remove the executed job from Q2
+                        for (int i = shortestJobIndex; i < Q2Size - 1; i++) {
+                            Q2[i] = Q2[i + 1];
+                        }
+                        Q2Size--;
+                    }
+                }
+            } else {
+                currentTime++;
             }
-            process.setCpuBurst(process.getCpuBurst()); // Reset CPU burst to original value
-            process.setWaitingTime(waitingTime);
-            process.setTurnaroundTime(waitingTime + process.getCpuBurst());
         }
     }
-
-    public double getAverageWaiting() {
-        double sum = 0;
-        for (int i = 0; i < numProcesses; i++) {
-            sum += processes[i].getWaitingTime();
-        }
-        return sum / numProcesses;
-    }
-
-    public double getAverageTurnaround() {
-        double sum = 0;
-        for (int i = 0; i < numProcesses; i++) {
-            sum += processes[i].getTurnaroundTime();
-        }
-        return sum / numProcesses;
-    }
-
-    public ArrayList<GanttChartSection> getGanttChartData() {
-        return ganttChartData;
-    }}
-  }
 
     void printReport() {
         // Print scheduling order of processes
         System.out.print("Scheduling Order of Processes: ");
-        for (process process : Q1) {
+        for (Process process : Q1) {
+            if (process != null) {
+                System.out.print(process.processID + " | ");
+            }
+        }
+        for (Process process : Q2) {
             if (process != null) {
                 System.out.print(process.processID + " | ");
             }
@@ -196,7 +183,20 @@ public class Scheduler {
         System.out.println("\n");
 
         // Print detailed information for each process
-        for (process process : Q1) {
+        for (Process process : Q1) {
+            if (process != null) {
+                System.out.println("Process ID: " + process.processID);
+                System.out.println("Priority: " + process.priority);
+                System.out.println("Arrival Time: " + process.arrivalTime);
+                System.out.println("CPU Burst: " + process.cpuBurst);
+                System.out.println("Start Time: " + process.startTime);
+                System.out.println("Termination Time: " + process.terminationTime);
+                System.out.println("Turnaround Time: " + process.turnaroundTime);
+                System.out.println("Waiting Time: " + process.waitingTime);
+                System.out.println("Response Time: " + process.responseTime + "\n");
+            }
+        }
+        for (Process process : Q2) {
             if (process != null) {
                 System.out.println("Process ID: " + process.processID);
                 System.out.println("Priority: " + process.priority);
@@ -215,7 +215,15 @@ public class Scheduler {
         int totalWaitingTime = 0;
         int totalResponseTime = 0;
         int count = 0;
-        for (process process : Q1) {
+        for (Process process : Q1) {
+            if (process != null) {
+                totalTurnaroundTime += process.turnaroundTime;
+                totalWaitingTime += process.waitingTime;
+                totalResponseTime += process.responseTime;
+                count++;
+            }
+        }
+        for (Process process : Q2) {
             if (process != null) {
                 totalTurnaroundTime += process.turnaroundTime;
                 totalWaitingTime += process.waitingTime;
@@ -230,15 +238,16 @@ public class Scheduler {
         System.out.println("Average Turnaround Time: " + avgTurnaroundTime);
         System.out.println("Average Waiting Time: " + avgWaitingTime);
         System.out.println("Average Response Time: " + avgResponseTime);
-       
-        // write them to text file 
     }
 
-    private void shiftArray(process[] array, int size) {
+    private void shiftArray(Process[] array, int size) {
         for (int i = 0; i < size - 1; i++) {
             array[i] = array[i + 1];
         }
     }
 
-
+    public static void main(String[] args) {
+        Scheduler scheduler = new Scheduler();
+        scheduler.menu();
+    }
 }
